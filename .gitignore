@@ -1,0 +1,6 @@
+helm-v2.14.1-linux-amd64.tar.gz
+*.swp
+linux-amd64/*
+rbac-config.yaml
+tls.crt
+tls.key

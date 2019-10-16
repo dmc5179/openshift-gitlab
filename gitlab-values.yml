@@ -1,0 +1,34 @@
+certmanager:
+  install: false
+global:
+  edition: ce
+  hosts:
+    domain: dan.redhatgov.io # your TLS certificates must match gitlab.<my-domain>
+    https: false
+#    externalIP: 3.226.157.23 # of gitlab.<my-domain>
+  ingress:
+    configureCertmanager: false
+    tls:
+      secretName: gitlab-certs
+  nginx-ingress:
+    enabled: false
+  registry:
+    enabled: false
+  gitlab:
+    sidekiq:
+      registry:
+        enabled: false
+    task-runner:
+      registry:
+        enabled: false
+    unicorn:
+      registry:
+        enabled: false
+#psql:
+#    host: <fqdn-of-postgresql-server>
+#    port: 5432
+#    username: <username>
+#    database: <database-name>
+#    password:
+#      secret: <secret-with-password-of-psql.username>
+#      key: <key-within-secret>
