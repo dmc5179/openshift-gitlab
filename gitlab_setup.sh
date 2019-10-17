@@ -3,6 +3,19 @@
 # https://labs.consol.de/devops/2019/07/31/installing-gitlab-on-openshift.html
 
 export NAMESPACE=gitlab
+export GITLAB_RELEASE=gitlab
+
+ROOT_PASSWORD=redhat1!
+REDIS_PASSWORD=redhat1!
+SHELL_SECRET=redhat1!
+GITALY_SECRET=redhat1!
+RAILS_SECRET=redhat1!
+WORKHORSE_SECRET=redhat1!
+RUNNER_SECRET=redhat1!
+MINIO_SECRET=redhat1!
+POSTGRESQL_SECRET=redhat1!
+GRAPHANA_SECRET=redhat1!
+REGISTRY_HTTP_SECRET=redhat1!
 
 oc new-project ${NAMESPACE}
 oc adm policy add-scc-to-user anyuid -z default -n ${NAMESPACE}
@@ -10,6 +23,41 @@ oc adm policy add-scc-to-user anyuid -z gitlab-runner -n ${NAMESPACE}
 oc adm policy add-scc-to-user anyuid -z gitlab-shared-secrets -n ${NAMESPACE}
 oc adm policy add-scc-to-user anyuid -z gitlab-gitlab-runner -n ${NAMESPACE}
 oc adm policy add-scc-to-user anyuid -z gitlab-prometheus-server -n ${NAMESPACE}
+
+# Create secrets for initial passwords
+# Initial root password
+oc create secret generic ${GITLAB_RELEASE}-gitlab-initial-root-password --from-literal=password=${ROOT_PASSWORD}
+# Initial Redis password
+create secret generic ${GITLAB_RELEASE}-redis-secret --from-literal=secret=${REDIS_PASSWORD}
+#Gitlab shell secret
+oc create secret generic ${GITLAB_RELEASE}-gitlab-shell-secret --from-literal=secret=${SHELL_SECRET}
+#Gitaly secret
+oc create secret generic ${GITLAB_RELEASE}-gitaly-secret --from-literal=token=${GITALY_SECRET}
+#Gitlab rails secret
+cat << EOF > secrets.yml
+production:
+  secret_key_base: $(head -c 512 /dev/urandom | LC_CTYPE=C tr -cd 'a-zA-Z0-9' | head -c 128)
+  otp_key_base: $(head -c 512 /dev/urandom | LC_CTYPE=C tr -cd 'a-zA-Z0-9' | head -c 128)
+  db_key_base: $(head -c 512 /dev/urandom | LC_CTYPE=C tr -cd 'a-zA-Z0-9' | head -c 128)
+  openid_connect_signing_key: |
+$(openssl genrsa 2048 | awk '{print "    " $0}')
+EOF
+
+oc create secret generic ${GITLAB_RELEASE}-rails-secret --from-file=secrets.yml
+# Gitlab workhorse secret
+oc create secret generic ${GITLAB_RELEASE}-gitlab-workhorse-secret --from-literal=shared_secret=${WORKHORSE_SECRET}
+# Gitlab runner secret
+oc create secret generic ${GITLAB_RELEASE}-gitlab-runner-secret --from-literal=runner-registration-token=${RUNNER_SECRET}
+#Minio secret
+oc create secret generic ${GITLAB_RELEASE}-minio-secret --from-literal=accesskey=$(head -c 512 /dev/urandom | LC_CTYPE=C tr -cd 'a-zA-Z0-9' | head -c 20) --from-literal=secretkey=$(head -c 512 /dev/urandom | LC_CTYPE=C tr -cd 'a-zA-Z0-9' | head -c 64)
+# Postgresql secret
+oc create secret generic ${GITLAB_RELEASE}-postgresql-password --from-literal=postgres-password=${POSTGRESQL_SECRET}
+# Graphana password
+generate_secret_if_needed "gitlab-grafana-initial-password" --from-literal=password=${GRAPHANA_SECRET}
+# Registry HTTP Secret
+oc create secret generic ${GITLAB_RELEASE}-registry-httpsecret --from-literal=secret=${REGISTRY_HTTP_SECRET}
+￼
+￼
 
 # Get the TLS certs
 oc get -n default secret router-certs -o jsonpath='{.data.tls\.crt}' | base64 -d > tls.crt
@@ -33,7 +81,7 @@ pushd linux-amd64
 ./helm repo add gitlab https://charts.gitlab.io/
 ./helm repo update
 
-./helm upgrade --tiller-namespace=${NAMESPACE} -f ../gitlab-values.yml --install gitlab gitlab/gitlab \
+./helm upgrade --tiller-namespace=${NAMESPACE} -f ../gitlab-values.yml --install "${GITLAB_RELEASE}" gitlab/gitlab \
   --timeout 600 \
   --version 2.1.1 \
   --set nginx-ingress.enabled=false \
