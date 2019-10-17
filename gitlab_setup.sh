@@ -4,15 +4,6 @@
 
 export NAMESPACE=gitlab
 
-#oc delete project gitlab
-
-#oc delete clusterrole gitlab-prometheus-kube-state-metrics
-#oc delete clusterrole gitlab-prometheus-server
-#oc delete clusterrolebinding gitlab-prometheus-alertmanager
-#oc delete clusterrolebinding gitlab-prometheus-kube-state-metrics
-#oc delete clusterrolebinding gitlab-prometheus-node-exporter
-#oc delete clusterrolebinding gitlab-prometheus-server
-
 oc new-project ${NAMESPACE}
 oc adm policy add-scc-to-user anyuid -z default -n ${NAMESPACE}
 oc adm policy add-scc-to-user anyuid -z gitlab-runner -n ${NAMESPACE}
@@ -32,8 +23,6 @@ wget  https://gitlab.com/charts/gitlab/raw/master/doc/installation/examples/rbac
 sed -i "s/kube-system/${NAMESPACE}/g" ./rbac-config.yaml
 oc create -f ./rbac-config.yaml
 
-#./helm init --service-account tiller --tiller-namespace=${NAMESPACE}
-#./helm init --override 'spec.template.spec.containers[0].command'='{/tiller,--storage=secret,--listen=localhost:44134}' --service-account=tiller --tiller-namespace=${NAMESPACE}
 wget https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
 tar -xzf helm-v2.14.1-linux-amd64.tar.gz
 pushd linux-amd64
@@ -43,7 +32,6 @@ pushd linux-amd64
 
 ./helm repo add gitlab https://charts.gitlab.io/
 ./helm repo update
-# ./helm install -f gitlab-values.yml --tiller-namespace=${NAMESPACE} --name gitlab gitlab/gitlab --timeout 600 --version 2.1.1
 
 ./helm upgrade --tiller-namespace=${NAMESPACE} -f ../gitlab-values.yml --install gitlab gitlab/gitlab \
   --timeout 600 \
@@ -72,10 +60,5 @@ pushd linux-amd64
   #--set global.psql.password.secret=kubernetes_secret_name \
   #--set global.psql.password.key=key_that_contains_postgres_password \
   # Configure community edition instead of enterprise
-
-
-
-
-#./helm upgrade -f gitlab-values.yml --tiller-namespace=${NAMESPACE} --install gitlab gitlab/gitlab   --timeout 600   --set nginx-ingress.enabled=false   --set global.hosts.domain=dan.redhatgov.io   --set global.edition=ce   --set certmanager.install=false   --set global.ingress.configureCertmanager=false   --set gitlab-runner.install=false   --set certmanager.rbac.create=false   --set nginx-ingress.rbac.createRole=false   --set prometheus.rbac.create=false   --set gitlab-runner.rbac.create=false 
 
 popd
